@@ -101,6 +101,30 @@ jobs:
         run: |
           cmake --build build --parallel
 
+      - name: Ad-hoc sign the app bundle
+        run: |
+          APP=build/bundle/InputLeap.app
+          # macdeployqt modifies the binaries after the linker's provisional
+          # ad-hoc signature, leaving the bundle unsealed. Gatekeeper then
+          # reports it as damaged on Apple Silicon.
+          xattr -cr "$APP"
+          codesign --force --deep --sign - "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+
+      - name: Rebuild the disk image with the signed app
+        if: env.B_BUILD_TYPE == 'Release'
+        run: |
+          DMG=$(find build/bundle -maxdepth 1 -name '*.dmg' -print -quit)
+          if [ -z "$DMG" ]; then
+            echo "no dmg produced by the build" >&2
+            exit 1
+          fi
+          NAME=$(basename "$DMG")
+          rm -f "$DMG"
+          hdiutil create -volname InputLeap \
+            -srcfolder build/bundle/InputLeap.app \
+            -ov -format UDZO "build/bundle/$NAME"
+
       - uses: actions/upload-artifact@v4
         if: env.B_BUILD_TYPE == 'Release'
         with:
