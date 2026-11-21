@@ -9,6 +9,7 @@ config.h
 /bin
 /lib
 /build
+/build-debug
 /out
 /CMakeFiles
 /ext/cryptopp562
