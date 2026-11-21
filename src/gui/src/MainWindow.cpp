@@ -1430,7 +1430,8 @@ void MainWindow::on_m_pCheckBoxAutoConfig_toggled(bool checked)
         return;
     }
 
-    ui_->m_pLineEditHostname->setDisabled(checked);
+    // Keep the hostname field editable even with auto config enabled: it
+    // is used as a fallback when no server is discovered (see clientArgs).
     appConfig().setAutoConfig(checked);
     updateZeroconfService();
 
