@@ -28,9 +28,11 @@ jobs:
       fail-fast: false
       matrix:
        include:
+         # Qt 6.6's Cocoa plugin crashes on macOS 26/27 when the menu bar
+         # icon is clicked (NSEvent clickCount assertion); fixed in 6.10.2.
          - name: macOS-Apple_Silicon
            os: macos-15
-           qt-version: 6.6
+           qt-version: 6.10.2
            min-macOS-version: 14
            arch: 'arm64'
 
