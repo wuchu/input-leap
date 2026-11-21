@@ -29,6 +29,12 @@ have xcrun || die "Xcode Command Line Tools not found. Run: xcode-select --insta
 
 BREW_PREFIX="$(brew --prefix)"
 
+# build_dist.sh uses tput for colored output; with TERM=dumb/unset the
+# final tput call returns non-zero and makes the build target fail.
+case "${TERM:-}" in
+    ""|dumb) export TERM=xterm ;;
+esac
+
 QT_PREFIX="$(brew --prefix qtbase 2>/dev/null || true)"
 [ -n "$QT_PREFIX" ] && [ -d "$QT_PREFIX/lib/cmake/Qt6" ] \
     || die "Qt 6 not found. Run: brew install qtbase qttools"
@@ -58,6 +64,21 @@ if [ "${CLEAN:-0}" = "1" ]; then
     echo "==> removing $BUILD_DIR"
     rm -rf "$BUILD_DIR"
 fi
+
+# Start from a clean app bundle so macdeployqt does not reuse libraries
+# from a previous deployment. configure_files recreates the skeleton below.
+rm -rf "$BUILD_DIR/bundle/InputLeap.app"
+
+# macdeployqt searches <bundle>/lib but not the Homebrew prefix, and
+# Homebrew installs some Qt modules (e.g. QtSvg, needed by the SVG icon
+# plugin) outside qtbase. Symlink those frameworks where macdeployqt looks.
+mkdir -p "$BUILD_DIR/bundle/lib"
+for fw in "$BREW_PREFIX"/lib/*.framework; do
+    [ -e "$fw" ] || continue
+    name="$(basename "$fw")"
+    [ -e "$QT_PREFIX/lib/$name" ] && continue
+    ln -sfn "$fw" "$BUILD_DIR/bundle/lib/$name"
+done
 
 echo "==> configuring ($BUILD_TYPE, deployment target $DEPLOYMENT_TARGET)"
 cmake -S . -B "$BUILD_DIR" -G Ninja \
